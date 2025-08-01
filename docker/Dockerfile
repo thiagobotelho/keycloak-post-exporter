@@ -1,13 +1,15 @@
 FROM python:3.11-slim
 
-# Instala dependências do sistema para troubleshooting e o app
+# Instala dependências do sistema
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
         iputils-ping \
         dnsutils \
-        netcat \
-        ca-certificates && \
+        netcat-openbsd \
+        ca-certificates \
+        gnupg \
+        apt-transport-https && \
     pip install --no-cache-dir prometheus_client requests && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
