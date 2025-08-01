@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keycloak-post-exporter
-  namespace: monitoring
   labels:
     app: keycloak-post-exporter
 spec:
@@ -17,7 +16,7 @@ spec:
     spec:
       containers:
         - name: exporter
-          image: <seu-registro>/keycloak-post-exporter:latest
+          image: quay.io/thiagobotelho/keycloak-post-exporter:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
