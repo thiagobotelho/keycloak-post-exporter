@@ -17,7 +17,7 @@ RUN apt-get update && \
 WORKDIR /app
 
 # Copia o código
-COPY main.py .
+COPY src/main.py .
 
 # Define o comando de inicialização
 CMD ["python", "main.py"]
