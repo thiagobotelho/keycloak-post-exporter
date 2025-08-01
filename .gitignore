@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+
+# Docker
+*.tar
+
+# VS Code
+.vscode/
+
+# GitHub
+*.log
+
+# Build
+build/
+dist/
+
+# Misc
+*.swp
+.DS_Store
