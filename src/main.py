@@ -2,7 +2,11 @@ import os
 import time
 import threading
 import requests
+import urllib3
 from prometheus_client import Gauge, start_http_server
+
+# Suprime o warning de verificação TLS (uso de verify=False)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Variáveis de ambiente
 KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL")
