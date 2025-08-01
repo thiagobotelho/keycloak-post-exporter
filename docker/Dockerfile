@@ -1,7 +1,15 @@
 FROM python:3.11-slim
 
-# Instala dependências
-RUN pip install --no-cache-dir prometheus_client requests
+# Instala dependências do sistema para troubleshooting e o app
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        iputils-ping \
+        dnsutils \
+        netcat \
+        ca-certificates && \
+    pip install --no-cache-dir prometheus_client requests && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copia código
 WORKDIR /app
