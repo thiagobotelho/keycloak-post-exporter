@@ -2,13 +2,13 @@ FROM python:3.11-slim
 
 LABEL maintainer="thiagobotelho"
 
-# Instala ferramentas de diagnóstico e bibliotecas necessárias
+# Instala ferramentas básicas de troubleshooting
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
         iputils-ping \
         dnsutils \
-        netcat \
+        netcat-openbsd \
         ca-certificates && \
     pip install --no-cache-dir prometheus_client requests && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
