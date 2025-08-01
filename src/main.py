@@ -23,10 +23,13 @@ if not KEYCLOAK_URL or not CLIENT_ID or not CLIENT_SECRET:
     raise ValueError("As variáveis de ambiente KEYCLOAK_URL, CLIENT_ID e CLIENT_SECRET são obrigatórias.")
 
 # Logs iniciais
-print("🔄 Inicializando Keycloak POST Exporter na porta 8000...")
-print(f"🌐 KEYCLOAK_URL: {KEYCLOAK_URL}")
-print(f"🔐 CLIENT_ID: {CLIENT_ID}")
-print(f"📛 INSTANCE: {INSTANCE}, NAMESPACE: {NAMESPACE}, POD: {POD}")
+print("🔄 Inicializando Keycloak POST Exporter na porta 8000...", flush=True)
+print(f"🌐 KEYCLOAK_URL: {KEYCLOAK_URL}", flush=True)
+print(f"🔐 CLIENT_ID: {CLIENT_ID}", flush=True)
+print(f"📛 INSTANCE: {INSTANCE}, NAMESPACE: {NAMESPACE}, POD: {POD}", flush=True)
+print("➡️ Iniciando requisição POST ao Keycloak...", flush=True)
+print(f"✅ POST bem-sucedido em {duration:.3f}s (status {response.status_code})", flush=True)
+print(f"❌ Erro ao fazer POST: {e}", flush=True)
 
 # Métrica com labels
 keycloak_post_duration = Gauge(
