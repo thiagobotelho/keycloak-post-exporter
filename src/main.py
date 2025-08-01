@@ -35,6 +35,7 @@ def measure_loop():
             )
             duration = time.time() - start
             keycloak_post_duration.set(duration)
+            print(f"POST realizado com sucesso: {duration:.3f} segundos - status {response.status_code}")
         except Exception as e:
             print(f"Erro ao fazer POST: {e}")
             keycloak_post_duration.set(-1)
@@ -43,5 +44,6 @@ def measure_loop():
 
 # Inicializa o exportador
 if __name__ == '__main__':
+    print("Inicializando Keycloak POST Exporter na porta 8000...")
     start_http_server(8000)  # Exposição HTTP na porta 8000
     threading.Thread(target=measure_loop).start()
