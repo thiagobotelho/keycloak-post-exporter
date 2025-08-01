@@ -12,6 +12,10 @@ CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
 if not KEYCLOAK_URL or not CLIENT_ID or not CLIENT_SECRET:
     raise ValueError("Variáveis de ambiente KEYCLOAK_URL, CLIENT_ID e CLIENT_SECRET são obrigatórias.")
 
+print("Inicializando Keycloak POST Exporter na porta 8000...")
+print(f"KEYCLOAK_URL: {KEYCLOAK_URL}")
+print(f"CLIENT_ID: {CLIENT_ID}")
+
 # Métrica Prometheus
 keycloak_post_duration = Gauge(
     'external_keycloak_token_post_duration_seconds',
@@ -22,6 +26,7 @@ keycloak_post_duration = Gauge(
 def measure_loop():
     while True:
         try:
+            print("Iniciando requisição POST ao Keycloak...")
             start = time.time()
             response = requests.post(
                 KEYCLOAK_URL,
@@ -35,15 +40,14 @@ def measure_loop():
             )
             duration = time.time() - start
             keycloak_post_duration.set(duration)
+
             print(f"POST realizado com sucesso: {duration:.3f} segundos - status {response.status_code}")
         except Exception as e:
             print(f"Erro ao fazer POST: {e}")
             keycloak_post_duration.set(-1)
 
-        time.sleep(60)  # Intervalo de 1 minuto entre requisições
+        time.sleep(60)
 
-# Inicializa o exportador
 if __name__ == '__main__':
-    print("Inicializando Keycloak POST Exporter na porta 8000...")
-    start_http_server(8000)  # Exposição HTTP na porta 8000
+    start_http_server(8000)
     threading.Thread(target=measure_loop).start()

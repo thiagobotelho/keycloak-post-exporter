@@ -1,22 +1,23 @@
 FROM python:3.11-slim
 
-# Instala dependências do sistema
+LABEL maintainer="thiagobotelho"
+
+# Instala ferramentas de diagnóstico e bibliotecas necessárias
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
         iputils-ping \
         dnsutils \
-        netcat-openbsd \
-        ca-certificates \
-        gnupg \
-        apt-transport-https && \
+        netcat \
+        ca-certificates && \
     pip install --no-cache-dir prometheus_client requests && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copia código
+# Cria diretório de trabalho
 WORKDIR /app
-COPY src/main.py /app/main.py
 
-# Define porta e comando de entrada
-EXPOSE 8000
-CMD ["python", "/app/main.py"]
+# Copia o código
+COPY main.py .
+
+# Define o comando de inicialização
+CMD ["python", "main.py"]
