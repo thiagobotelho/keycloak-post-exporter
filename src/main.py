@@ -39,7 +39,7 @@ keycloak_post_duration = Gauge(
 def measure_loop():
     while True:
         try:
-            print("➡Iniciando requisição POST ao Keycloak...", flush=True)
+            #print("➡Iniciando requisição POST ao Keycloak...", flush=True)
             start = time.time()
             response = requests.post(
                 KEYCLOAK_URL,
@@ -53,7 +53,7 @@ def measure_loop():
             )
             duration = time.time() - start
             keycloak_post_duration.labels(INSTANCE, NAMESPACE, POD).set(duration)
-
+            #print(f"POST bem-sucedido em {duration:.3f}s (status {response.status_code})", flush=True)
         except Exception as e:
             print(f"Erro ao fazer POST: {e}", flush=True)
             keycloak_post_duration.labels(INSTANCE, NAMESPACE, POD).set(-1)
