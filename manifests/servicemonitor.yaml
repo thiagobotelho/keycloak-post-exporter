@@ -8,9 +8,6 @@ spec:
   selector:
     matchLabels:
       app: keycloak-post-exporter
-  namespaceSelector:
-    matchNames:
-      - monitoring
   endpoints:
     - port: metrics
       interval: 1m

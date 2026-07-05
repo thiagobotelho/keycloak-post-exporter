@@ -1,68 +1,134 @@
+import logging
 import os
-import time
 import threading
+import time
+from dataclasses import dataclass
+
 import requests
-import urllib3
-from prometheus_client import Gauge, start_http_server
+from prometheus_client import Counter, Gauge, start_http_server
 
-# Suprime warning de TLS quando verify=False
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Variáveis de ambiente obrigatórias
-KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL")
-CLIENT_ID = os.environ.get("CLIENT_ID")
-CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+LOGGER = logging.getLogger(__name__)
 
-# Labels extras para facilitar identificação no Prometheus/Grafana
-INSTANCE = os.environ.get("HOSTNAME", "unknown")
-NAMESPACE = os.environ.get("NAMESPACE", "unknown")
-POD = os.environ.get("POD_NAME", INSTANCE)
-
-# Validação mínima
-if not KEYCLOAK_URL or not CLIENT_ID or not CLIENT_SECRET:
-    raise ValueError("As variáveis de ambiente KEYCLOAK_URL, CLIENT_ID e CLIENT_SECRET são obrigatórias.")
-
-# Logs iniciais
-print("Inicializando Keycloak POST Exporter na porta 8000...", flush=True)
-print(f"KEYCLOAK_URL: {KEYCLOAK_URL}", flush=True)
-print(f"CLIENT_ID: {CLIENT_ID}", flush=True)
-print(f"INSTANCE: {INSTANCE}, NAMESPACE: {NAMESPACE}, POD: {POD}", flush=True)
-
-# Métrica com labels
-keycloak_post_duration = Gauge(
-    'external_keycloak_token_post_duration_seconds',
-    'Tempo de resposta da requisição POST ao endpoint /token do Keycloak',
-    ['instance', 'namespace', 'pod']
+DURATION = Gauge(
+    "external_keycloak_token_post_duration_seconds",
+    "Duração da requisição ao endpoint de token do Keycloak.",
+    ["instance", "namespace", "pod"],
+)
+SUCCESS = Gauge(
+    "external_keycloak_token_post_success",
+    "1 quando a última requisição retornou sucesso; 0 em caso de falha.",
+    ["instance", "namespace", "pod"],
+)
+HTTP_STATUS = Gauge(
+    "external_keycloak_token_post_http_status",
+    "Código HTTP retornado pela última requisição.",
+    ["instance", "namespace", "pod"],
+)
+ERRORS = Counter(
+    "external_keycloak_token_post_errors_total",
+    "Total de falhas ao consultar o endpoint de token.",
+    ["instance", "namespace", "pod"],
 )
 
-# Loop de medição contínuo
-def measure_loop():
-    while True:
-        try:
-            #print("➡Iniciando requisição POST ao Keycloak...", flush=True)
-            start = time.time()
-            response = requests.post(
-                KEYCLOAK_URL,
-                data={
-                    'grant_type': 'client_credentials',
-                    'client_id': CLIENT_ID,
-                    'client_secret': CLIENT_SECRET
-                },
-                timeout=10,
-                verify=False
-            )
-            duration = time.time() - start
-            keycloak_post_duration.labels(INSTANCE, NAMESPACE, POD).set(duration)
-            #print(f"POST bem-sucedido em {duration:.3f}s (status {response.status_code})", flush=True)
-        except Exception as e:
-            print(f"Erro ao fazer POST: {e}", flush=True)
-            keycloak_post_duration.labels(INSTANCE, NAMESPACE, POD).set(-1)
 
-        time.sleep(60)
+def env_bool(name: str, default: bool = True) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
-# Start HTTP server e inicia thread
-if __name__ == '__main__':
-    start_http_server(8000)
-    threading.Thread(target=measure_loop, daemon=True).start()
-    while True:
-        time.sleep(3600)  # Mantém o processo ativo
+
+@dataclass(frozen=True)
+class Config:
+    url: str
+    client_id: str
+    client_secret: str
+    instance: str
+    namespace: str
+    pod: str
+    verify_tls: bool
+    interval: float
+    timeout: float
+    listen_port: int
+
+    @classmethod
+    def from_env(cls) -> "Config":
+        required = {
+            name: os.getenv(name)
+            for name in ("KEYCLOAK_URL", "CLIENT_ID", "CLIENT_SECRET")
+        }
+        missing = [name for name, value in required.items() if not value]
+        if missing:
+            raise ValueError(f"Variáveis obrigatórias ausentes: {', '.join(missing)}")
+
+        instance = os.getenv("HOSTNAME", "unknown")
+        return cls(
+            url=required["KEYCLOAK_URL"] or "",
+            client_id=required["CLIENT_ID"] or "",
+            client_secret=required["CLIENT_SECRET"] or "",
+            instance=instance,
+            namespace=os.getenv("NAMESPACE", "unknown"),
+            pod=os.getenv("POD_NAME", instance),
+            verify_tls=env_bool("VERIFY_TLS", True),
+            interval=float(os.getenv("CHECK_INTERVAL_SECONDS", "60")),
+            timeout=float(os.getenv("REQUEST_TIMEOUT_SECONDS", "10")),
+            listen_port=int(os.getenv("LISTEN_PORT", "8000")),
+        )
+
+
+def measure_once(config: Config, session: requests.Session | None = None) -> bool:
+    labels = (config.instance, config.namespace, config.pod)
+    client = session or requests.Session()
+    started = time.monotonic()
+    try:
+        response = client.post(
+            config.url,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": config.client_id,
+                "client_secret": config.client_secret,
+            },
+            timeout=config.timeout,
+            verify=config.verify_tls,
+        )
+        duration = time.monotonic() - started
+        DURATION.labels(*labels).set(duration)
+        HTTP_STATUS.labels(*labels).set(response.status_code)
+        response.raise_for_status()
+        SUCCESS.labels(*labels).set(1)
+        return True
+    except requests.RequestException as exc:
+        DURATION.labels(*labels).set(time.monotonic() - started)
+        SUCCESS.labels(*labels).set(0)
+        ERRORS.labels(*labels).inc()
+        LOGGER.warning("Falha ao consultar o endpoint de token: %s", exc)
+        return False
+
+
+def measure_loop(config: Config) -> None:
+    with requests.Session() as session:
+        while True:
+            measure_once(config, session)
+            time.sleep(config.interval)
+
+
+def main() -> None:
+    config = Config.from_env()
+    LOGGER.info(
+        "Iniciando exporter na porta %s; destino=%s; verify_tls=%s",
+        config.listen_port,
+        config.url,
+        config.verify_tls,
+    )
+    start_http_server(config.listen_port)
+    threading.Thread(target=measure_loop, args=(config,), daemon=True).start()
+    threading.Event().wait()
+
+
+if __name__ == "__main__":
+    main()

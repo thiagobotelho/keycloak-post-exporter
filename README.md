@@ -16,15 +16,23 @@ keycloak-post-exporter/
 │   ├── deployment.yaml
 │   ├── service.yaml
 │   ├── servicemonitor.yaml
-│   └── secret-example.yaml
+│   └── secret.example
 ├── src/main.py                          # Código-fonte do exporter
 ├── .gitignore
 └── README.md
 ```
 
 ## 🚀 Deploy no OpenShift
-1. Edite o `secret-example.yaml` com seu `client_id` e `client_secret`
-2. aplique os manifests:
+1. Crie o Secret sem gravar credenciais no Git:
+
+```bash
+oc create secret generic keycloak-auth-secret \
+  --from-literal=CLIENT_ID="$CLIENT_ID" \
+  --from-literal=CLIENT_SECRET="$CLIENT_SECRET" \
+  --from-literal=KEYCLOAK_URL="$KEYCLOAK_URL"
+```
+
+2. Aplique os manifests:
 ```bash
 oc apply -f manifests/
 ```
@@ -38,6 +46,10 @@ external_keycloak_token_post_duration_seconds
 ## 🛠 Variáveis de ambiente
 - `CLIENT_ID` – Client ID do Keycloak
 - `CLIENT_SECRET` – Client Secret do Keycloak
+- `KEYCLOAK_URL` – endpoint completo de token
+- `VERIFY_TLS` – valida certificados TLS; padrão `true`
+- `CHECK_INTERVAL_SECONDS` – intervalo de coleta; padrão `60`
+- `REQUEST_TIMEOUT_SECONDS` – timeout HTTP; padrão `10`
 
 Essas variáveis são consumidas via `Secret` e injetadas no container.
 
