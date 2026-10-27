@@ -5,6 +5,8 @@ metadata:
   labels:
     app: keycloak-post-exporter
 spec:
+  # Seletores precisam corresponder aos labels dos recursos de destino.
+  # Seletores precisam corresponder aos labels dos recursos de destino.
   selector:
     app: keycloak-post-exporter
   ports:

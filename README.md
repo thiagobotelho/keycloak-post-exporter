@@ -59,3 +59,7 @@ A imagem é construída automaticamente pelo GitHub Actions com base no workflow
 ---
 
 **Licença:** MIT
+
+## Aprender a configuração
+
+Consulte o [guia comentado](docs/APRENDIZADO.md) para entender componentes, escolhas, testes positivos/negativos e reversão.
