@@ -6,7 +6,6 @@ metadata:
     release: prometheus
 spec:
   # Seletores precisam corresponder aos labels dos recursos de destino.
-  # Seletores precisam corresponder aos labels dos recursos de destino.
   selector:
     matchLabels:
       app: keycloak-post-exporter
